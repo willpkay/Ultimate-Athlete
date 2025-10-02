@@ -1,0 +1,266 @@
+---
+title: "Ultimate Athlete"
+subtitle: "Analysing peformance as a function of genotype"
+author: "Dr William Kay"
+date: today
+format: 
+  html:
+    css: styles.css
+editor: visual
+---
+
+# Tutorial
+
+## Introduction:
+
+We want to analyse if there is an association between performance and genotype.
+
+In this tutorial we will use data collected in a previous year to demonstrate this.
+
+Specifically, we will be analysing if **VO**$_2$ **max** is associated with **ACE** genotype (II, ID, DD)
+
+## Import the data into R
+
+The data that you need is saved on Learning Central. The file is called "**data.csv**".
+
+Start by downloading this file on to your device.
+
+Then, open RStudio on your device and create a new R Script.
+
+You can then copy the following code into your script and run it to import the data.
+
+**Note:** A new window should pop up on your device to allow you to select the data file.
+
+```{r}
+data <- read.csv(file.choose(), header = T, stringsAsFactors = T, na.strings = "")
+```
+
+## Explore the data
+
+Next, run a few basic functions to begin to explore the data.
+
+For example:
+
+### Structure
+
+Using the structure function `str()` shows you what variables you have in the dataset, and what types of variables these are:
+
+```{r}
+str(data)
+```
+
+### Summary function
+
+The `summary()` function applied to the dataset gives you a summary of all variables:
+
+```{r}
+summary(data)
+```
+
+Remember you can apply functions to a specific variable by typing the name of the dataset, followed by a dollar symbol `$` and then the name of the variable.
+
+For example:
+
+```{r}
+summary(data$vo2max)
+```
+
+### mean
+
+You can calculate the mean value of a variable using `mean()`.
+
+This is an example of performing *descriptive statistics*:
+
+```{r}
+mean(data$vo2max, na.rm = T)
+```
+
+Note that the `na.rm = T` part of this block of code above tells R to remove (rm) any missing observations (na) before calculating the mean.
+
+## Visualise the data
+
+It is always important to explore your data thoroughly. This includes plotting your data, which helps to identify if there are any patterns or outliers (extreme observations).
+
+### Histogram
+
+Let's start with a histogram to see what the distribution of VO$_2$ max looks like:
+
+```{r}
+hist(data$vo2max, xlab = expression(VO[2]~"max (L/min)"), main = "", las = 1)
+```
+
+Note that this plot shows us all of the data, regardless of which genotype it comes from.
+
+### Boxplot
+
+If we wanted to, we could have a look at the same data using a boxplot:
+
+```{r}
+boxplot(data$vo2max, las = 1, ylab = expression(VO[2]~"max (L/min)"))
+```
+
+Remember that the black horizontal line across the box shows the median value of VO$_2$ max. We could check this value by simply running:
+
+```{r}
+median(data$vo2max, na.rm = T)
+```
+
+### Boxplot of VO$_2$ max \~ ACE
+
+What we really want is to see whether VO$_2$ max varies according to the ACE genotype. We can use `boxplot()` again for this:
+
+```{r}
+boxplot(data$vo2max ~ data$ace, 
+        las = 1, 
+        ylab = expression(VO[2]~"max (L/min)"), 
+        xlab = "Genotype")
+```
+
+So, based on this visual inspection alone, it looks like people with the DD genotype might have a slightly higher average VO$_2$ max than those with ID or II.
+
+We would need to perform a statistical test to determine whether our data (our evidence!) is compelling enough to lead us to believe that this is indeed the case. If not, then we would conclude that any differences are down to chance (i.e., random variation).
+
+## Perform a statistical test
+
+If we just wanted to compare two groups, you will hopefully remember from your Year 1 training in Biostatistics that we could consider using a t-test.
+
+For example, we may just want to compare people with the **DD** genotype to those with **ID**.
+
+Before we can perform the statistical test, there are a few things we need to do.
+
+### Create subsets for DD and ID:
+
+First, it will make things easier if we create two subsets of the data:
+
+```{r}
+DD <- subset(data, ace == "DD")
+ID <- subset(data, ace == "ID")
+```
+
+### Check the *assumptions* of a t-test
+
+Next, you may remember that all statistical tests have what's called "assumptions".
+
+These are the assumptions of a t-test:
+
+1.  Data are continuous (interval or ratio scale)
+
+2.  Data in each group are independent
+
+3.  Data in each group are approximately normally distributed
+
+4.  Variances are equal between groups (for a standard two-sample t-test)
+
+Let's check each in turn.
+
+**First**, we know that the data are continuous. VO$_2$ max is a **continuous** variable.
+
+**Second**, we know that the data in each group are **independent**, because people can't have both DD *and* ID genotypes. They have to be one or the other. Hence the data in each group are not paired in any way and do not *depend* on one another.
+
+**Third**, we should check if our data are *approximately* **normally distributed**. The VO$_2$ max values in each genotype group should roughly follow a bell-shaped curve. I always think it's best to do this visually using a Q-Q plot:
+
+```{r}
+qqnorm(DD$vo2max, main = "DD genotype");qqline(DD$vo2max)
+qqnorm(ID$vo2max, main = "ID genotype");qqline(ID$vo2max)
+```
+
+Remember, we are looking to see if the observations (dots) lie roughly along the diagonal line. A little wiggle is fine, but we don’t want large deviations or unusual patterns.
+
+In this case, both look fine!
+
+And finally, **fourth**, we should check that our groups have equal variance. Again, this can be done visually, using a boxplot:
+
+```{r}
+boxplot(DD$vo2max, ID$vo2max, las = 1, names = c("DD", "ID"))
+```
+
+What we are looking for is that the *spread* of the boxes and the whiskers are roughly similar in both groups. In this case, they appear to have about the same variability.
+
+So, it looks like all four assumptions have been met, hence we can now do the t-test:
+
+### Perform a t-test
+
+The code to do this is very simple:
+
+```{r}
+t.test(DD$vo2max, ID$vo2max, var.equal = T)
+```
+
+## Interpreting the output
+
+Let's go through it step by step:
+
+-   `Two Sample t-test`: this reminds you which test was performed.
+
+-   `data`: this tells you what data were used in the test, in this case the VO$_2$ max values from DD and ID.
+
+-   `t = 1.4884`: This is the **test statistic**, indicating how extreme the difference is. You don’t need to interpret the number itself, but you do need to report it.
+
+-   `df = 60`: This is the **degrees of freedom** (total sample size minus the number of groups: 62 − 2).
+
+-   `p-value = 0.1419`: This is the **probability** of observing a difference at least this large by chance. Here, it's \~14%, so it's *not* statistically significant at the 0.05 threshold.
+
+-   `alternative hypothesis`: Remember that tests have both a null and an alternative hypothesis. In this case the null hypothesis is that there is no difference in the means between DD and ID; in other words, the difference in means is equal to zero. The alternative hypothesis is that the difference in the means is *not* equal to zero.
+
+-   `sample estimates`: This tells you the mean VO$_2$ max for each group (DD = 2.88, ID = 2.58 L/min).
+
+We can check the `sample estimates` are correct by calculating the means ourselves:
+
+```{r}
+mean(DD$vo2max, na.rm = T)
+mean(ID$vo2max, na.rm = T)
+```
+
+The difference in the means between the two groups is therefore:
+
+```{r}
+mean(DD$vo2max, na.rm = T) - mean(ID$vo2max, na.rm = T)
+```
+
+Now that we know this value we can better interpret the `95 percent confidence interval` bit of the output.
+
+-   `95 percent confidence interval`: Range of plausible values for the difference in means if the experiment were repeated. In this case, the difference in the mean could be between `-0.1037565` and `0.7071326`
+
+## Reporting the result
+
+Now that we understand everything that the output is telling us, we can report the result.
+
+Remember to write about the biology first, and include the statistical evidence.
+
+Here's an example:
+
+"People with the DD genotype had a mean VO$_2$ max of 2.88 L/min, whereas for people with the ID genotype this was 2.58 L/min, equating to a difference of 0.30 L/min (95% CI: -0.10 to 0.71; t = 1.49, df = 60, p = 0.14). This difference was not statistically significant at the 0.05 level."
+
+# Exercises
+
+::: {.callout-note collapse="true"}
+## Exercise 1
+
+Look back through the tutorial and adapt the code I've given you to:
+
+-   Perform a t-test to compare DD versus II
+
+-   Perform a t-test to compare ID versus II
+
+**HINT:** Remember to create a subset for II and to check the assumptions of a t-test before performing it!
+:::
+
+::: {.callout-note collapse="true"}
+## Exercise 2
+
+Now have a go at:
+
+-   Investigating whether power is associated with the ACTN-3 genotype (RR, RX, and XX).
+:::
+
+::: {.callout-note collapse="true"}
+## Exercise 3
+
+Now choose any other performance variable you want and explore whether that varies in association with gender.
+:::
+
+::: {.callout-note collapse="true"}
+## Exercise 4
+
+Finally, see if you can import *your own* data and do some of your own analysis.
+:::
